@@ -1,0 +1,6 @@
+*.cert
+*.key
+*.o
+
+libsigelf/lib/
+cli/bin

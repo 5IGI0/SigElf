@@ -1,0 +1,26 @@
+#ifndef LIBSIGNELF_SIGN_H__
+#define LIBSIGNELF_SIGN_H__
+
+#include <stddef.h>
+
+#ifdef LIBSIGNELF_INTERNAL
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+
+typedef struct {
+    EVP_PKEY *pkey;
+    size_t certlen;
+    char *cert;
+} sigelf_signer_t;
+
+/* for future use */
+typedef void sigelf_sign_opt_t;
+#else
+typedef void sigelf_signer_t;
+typedef void sigelf_sign_opt_t;
+#endif /* LIBSIGNELF_INTERNAL */
+
+sigelf_signer_t *SigElf_LoadKeyFromFile(char const *key_path, char const *cert_path);
+unsigned char   *SigElf_SignElf(sigelf_signer_t const *signer, sigelf_sign_opt_t *opt, unsigned char const *elf, size_t elflen, size_t *outlen);
+
+#endif /* LIBSIGNELF_SIGN_H__ */

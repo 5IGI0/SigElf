@@ -1,0 +1,5 @@
+-I/usr/include
+-I./libsigelf/include/
+-Wall
+-Wextra
+-std=c99
