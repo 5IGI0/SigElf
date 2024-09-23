@@ -12,7 +12,7 @@ Functions:
 
 Formats:
 [x] ELF64
-[ ] ELF32 (need to edit the makefile to compile 2 times sig_elf.c)
+[X] ELF32
 [ ] hashbang
 
 Others:

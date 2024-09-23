@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <elf.h>
+
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
@@ -9,6 +11,8 @@
 
 #define LIBSIGNELF_INTERNAL
 #include <sigelf/signing.h>
+
+#include "elf/sign.h" /* IWYU pragma: keep (???) */
 
 sigelf_signer_t *SigElf_LoadKeyFromFile(char const *key_path, char const *cert_path) {
     sigelf_signer_t ret = {0};
@@ -41,4 +45,14 @@ sigelf_signer_t *SigElf_LoadKeyFromFile(char const *key_path, char const *cert_p
     memcpy(ret_ptr, &ret, sizeof(ret));
 
     return ret_ptr;
+}
+
+unsigned char *SigElf_SignElf(
+    sigelf_signer_t const *signer,
+    sigelf_sign_opt_t *opt,
+    unsigned char const *elf,
+    size_t elflen, size_t *outlen) {
+    if (elf[EI_CLASS] == ELFCLASS64)
+        return H(sign_elf64)(signer, opt, elf, elflen, outlen);
+    return H(sign_elf32)(signer, opt, elf, elflen, outlen);
 }

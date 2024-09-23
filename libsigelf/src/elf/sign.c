@@ -15,14 +15,19 @@
 #include <sigelf/defines.h>
 #include <sigelf/signing.h>
 
-#include "macros.h" /* CRYPT_ERR_HELP() */
+#include "../defines.h"
+#include "../macros.h"
 
-/* TODO: manage non-host endianness */
-
-#define ELF64
+/* TODO: handle non-host endianness */
 
 #ifdef ELF64
 #define ElfN(x) Elf64_##x
+#define SIGNING_FUNC_NAME H(sign_elf64)
+#elif ELF32
+#define ElfN(x) Elf32_##x
+#define SIGNING_FUNC_NAME H(sign_elf32)
+#else
+#error no ELF format provided
 #endif
 
 struct elf_note {
@@ -52,7 +57,23 @@ static size_t notes_content_len(struct elf_note notes[SIGELF_NOTE_COUNT]) {
     return ret;
 }
 
-unsigned char *SigElf_SignElf(sigelf_signer_t const *signer, sigelf_sign_opt_t *opt, unsigned char const *elf, size_t elflen, size_t *outlen) {
+static ElfN(Addr) get_next_aligned_vaddr(ElfN(Phdr) *phdr, size_t phnum) {
+    ElfN(Addr) phdr_vaddr = 0;
+    for (size_t i = 0; i < phnum; i++) {
+        if (phdr[i].p_type == PT_LOAD) {
+            ElfN(Addr) end_of_segment = phdr->p_vaddr + phdr->p_memsz;
+            if (phdr_vaddr < end_of_segment)
+                phdr_vaddr = end_of_segment;
+        }
+    }
+    return (phdr_vaddr|0xFFF)+1;
+}
+
+unsigned char *SIGNING_FUNC_NAME(
+    sigelf_signer_t const *signer,
+    sigelf_sign_opt_t *opt,
+    unsigned char const *elf,
+    size_t elflen, size_t *outlen) {
     /* TODO: check if a signature is present / magic numbers */
     /* TODO: the code assumes header->e_phentsize == sizeof(ElfN(Phdr)) */
     struct elf_note notes[SIGELF_NOTE_COUNT] = {0};
@@ -60,6 +81,7 @@ unsigned char *SigElf_SignElf(sigelf_signer_t const *signer, sigelf_sign_opt_t *
     size_t          siglen     = 0;
     int             success    = 0;
 
+    size_t round_elflen     = (elflen|0xFFF)+1;
     ElfN(Ehdr)   *header    = (ElfN(Ehdr) *)elf;
     EVP_MD_CTX   *md_ctx    = EVP_MD_CTX_create();
     const EVP_MD *md        = EVP_sha256();
@@ -78,11 +100,11 @@ unsigned char *SigElf_SignElf(sigelf_signer_t const *signer, sigelf_sign_opt_t *
     notes[SIGELF_CERT_NOTE].addr = signer->cert;
     notes[SIGELF_CERT_NOTE].len  = signer->certlen+1; // cert + nullbyte
 
-    *outlen = elflen;
+    *outlen = round_elflen;
     /* new program headers */
     *outlen += (
         header->e_phentsize *
-        (header->e_phnum+count_notes(notes)));
+        (header->e_phnum+count_notes(notes)+1));
     /* notes content */
     *outlen += notes_content_len(notes);
     /* note headers and namespaces */
@@ -97,25 +119,30 @@ unsigned char *SigElf_SignElf(sigelf_signer_t const *signer, sigelf_sign_opt_t *
     header = (ElfN(Ehdr) *)retbuf;
 
     /* relocate program headers */
-    memcpy(retbuf+elflen, retbuf+header->e_phoff, header->e_phentsize * header->e_phnum);
-    header->e_phoff = elflen;
+    memcpy(retbuf+round_elflen, retbuf+header->e_phoff, header->e_phentsize * header->e_phnum);
+    header->e_phoff = round_elflen;
 
     /* add new program headers */
     ElfN(Off) sig_start = 0;
     ElfN(Off) sig_end   = 0;
     ElfN(Off) content_offset = (
-            elflen +
+            round_elflen +
             (header->e_phentsize * (
-                header->e_phnum + count_notes(notes))));
+                header->e_phnum + count_notes(notes) + 1)));
     for (size_t i = 0; i < SIGELF_NOTE_COUNT; i++) {
         if (notes[i].len == 0)
             continue;
 
         /* program header */
-        ElfN(Phdr) *phdr = (ElfN(Phdr) *)(retbuf + elflen + (header->e_phentsize * header->e_phnum));
+        ElfN(Phdr) *phdr = (ElfN(Phdr) *)(retbuf + header->e_phoff + (header->e_phentsize * header->e_phnum));
         phdr->p_type = PT_NOTE;
         phdr->p_filesz = notes[i].len + sizeof(ElfN(Nhdr)) + sizeof(SIGELF_NOTE_NAMESPACE);
+        phdr->p_memsz = notes[i].len + sizeof(ElfN(Nhdr)) + sizeof(SIGELF_NOTE_NAMESPACE);
         phdr->p_offset = content_offset;
+        phdr->p_vaddr = content_offset;
+        phdr->p_paddr = content_offset;
+        phdr->p_flags = PF_R;
+        phdr->p_align = 1;
         header->e_phnum++;
         content_offset += phdr->p_filesz;
 
@@ -138,6 +165,29 @@ unsigned char *SigElf_SignElf(sigelf_signer_t const *signer, sigelf_sign_opt_t *
             sig_end     = phdr->p_offset+phdr->p_filesz;
         }
 
+    }
+
+    /* add the new phdr into a loadable segment */
+    ElfN(Phdr) *phdr_seg = (ElfN(Phdr) *)(retbuf + header->e_phoff + (header->e_phentsize * header->e_phnum));
+    phdr_seg->p_type = PT_LOAD;
+    phdr_seg->p_filesz = content_offset - round_elflen;
+    phdr_seg->p_memsz =  content_offset - round_elflen;
+    phdr_seg->p_offset = round_elflen;
+    phdr_seg->p_vaddr = get_next_aligned_vaddr((ElfN(Phdr) *)(retbuf + header->e_phoff), header->e_phnum);
+    phdr_seg->p_flags = PF_R|PF_W;
+    phdr_seg->p_align = 0x1000;
+    header->e_phnum++;
+
+    /* patch phdr program header */
+    for (size_t i = 0; i < header->e_phnum; i++) {
+        ElfN(Phdr) *phdr = (void *)(retbuf + header->e_phoff);
+        if (phdr->p_type == PT_PHDR) {
+            phdr->p_offset  = header->e_phoff;
+            // phdr->p_paddr   = header->e_phoff;
+            phdr->p_vaddr   = phdr_seg->p_vaddr;
+            phdr->p_filesz  = content_offset - round_elflen;
+            phdr->p_memsz   = content_offset - round_elflen;          
+        }
     }
 
     /* hash data before the signature */
