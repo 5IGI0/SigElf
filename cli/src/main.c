@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-int sign(int argc, char const **argv);
-int lookup(int argc, char const **argv);
+int sign(int argc, char * const*argv);
+int lookup(int argc, char * const*argv);
 
 static void print_usage(char const *progname) {
     printf(
@@ -15,7 +15,7 @@ static void print_usage(char const *progname) {
     exit(1);
 }
 
-int main(int argc, char const **argv) {
+int main(int argc, char * const*argv) {
     if (argc <= 2) {
         print_usage(argv[0]);
     } else if (strcmp("sign", argv[1]) == 0) {

@@ -6,7 +6,7 @@
 
 #include "utils.h"
 
-int lookup(int argc, char const **argv) {
+int lookup(int argc, char * const *argv) {
     size_t elflen;
     void *elf_addr = map_file_to_memory(argv[2], &elflen);
 
