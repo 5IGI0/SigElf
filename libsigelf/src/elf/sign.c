@@ -61,7 +61,7 @@ static ElfN(Addr) get_next_aligned_vaddr(ElfN(Phdr) *phdr, size_t phnum) {
     ElfN(Addr) phdr_vaddr = 0;
     for (size_t i = 0; i < phnum; i++) {
         if (phdr[i].p_type == PT_LOAD) {
-            ElfN(Addr) end_of_segment = phdr->p_vaddr + phdr->p_memsz;
+            ElfN(Addr) end_of_segment = phdr[i].p_vaddr + phdr[i].p_memsz;
             if (phdr_vaddr < end_of_segment)
                 phdr_vaddr = end_of_segment;
         }
