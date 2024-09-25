@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#include "authorities.h"
+
 #ifdef LIBSIGNELF_INTERNAL
 
 #include "defines.h"
@@ -29,7 +31,9 @@ typedef void sigelf_signature_t;
 
 sigelf_signature_t *SigElf_GetElfSignature(unsigned const char *elf, size_t elflen);
 
-int SigElf_IsModified(sigelf_signature_t *sig);
-const char *SigElf_GetSignerName(sigelf_signature_t *sig);
+int         SigElf_IsModified(sigelf_signature_t *sig);
+const char  *SigElf_GetSignerName(sigelf_signature_t *sig);
+const char  *SigElf_GetIssuerName(sigelf_signature_t *sig);
+int         SigElf_IsSignerTrusted(sigelf_signature_t *sig, sigelf_ca_store_t *store);
 
 #endif /* LIBSIGNELF_VERIFY_H__ */

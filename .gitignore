@@ -1,6 +1,9 @@
 *.cert
+*.crt
 *.key
 *.o
+*.csr
+*.srl
 
 libsigelf/lib/
 cli/bin
