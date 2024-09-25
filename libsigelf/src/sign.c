@@ -13,38 +13,63 @@
 #include <sigelf/signing.h>
 
 #include "elf/sign.h" /* IWYU pragma: keep (???) */
+#include "macros.h"
 
 sigelf_signer_t *SigElf_LoadKeyFromFile(char const *key_path, char const *cert_path) {
     sigelf_signer_t ret = {0};
+    int success = 0;
+    FILE *fp = NULL;
 
     /* loading private key */
-    FILE *fp = fopen(key_path, "rb");
-    assert(fp);
+    if ((fp = fopen(key_path, "rb")) == NULL)
+        LIBC_ERR_HELP();
+    
+    if ((ret.pkey = EVP_PKEY_new()) == NULL)
+        CRYPT_ERR_HELP();
 
-    ret.pkey = EVP_PKEY_new();
-    assert(ret.pkey);
+    if (PEM_read_PrivateKey(fp, &ret.pkey, NULL, NULL) == NULL)
+        CRYPT_ERR_HELP();
 
-    if (!PEM_read_PrivateKey(fp, &ret.pkey, NULL, NULL))
-        return fclose(fp), NULL;
     fclose(fp);
+    fp = NULL;
 
     /* TODO: check certificate validity */
-    fp = fopen(cert_path, "rb");
-    fseek(fp, 0, SEEK_END);
-    ret.certlen = ftell(fp);
-    assert(ret.certlen > 0);
-    rewind(fp);
-    assert(ret.cert = malloc(ret.certlen + 1));
+    if ((fp = fopen(cert_path, "rb")) == NULL)
+        LIBC_ERR_HELP();
+
+    if (fseek(fp, 0, SEEK_END) < 0)
+        LIBC_ERR_HELP();
+
+    long certlen = 0;
+    if ((certlen = ftell(fp)) < 0)
+        LIBC_ERR_HELP();
+    ret.certlen = certlen;
+
+    if (fseek(fp, 0, SEEK_SET) < 0)
+        LIBC_ERR_HELP();
+
+    if ((ret.cert = malloc(ret.certlen + 1)) == NULL)
+        LIBC_ERR_HELP();
+
     assert(fread(ret.cert, 1, ret.certlen, fp) == ret.certlen);
     ret.cert[ret.certlen] = 0;
     fclose(fp);
+    fp = NULL;
+    success = 1;
 
-    /* it worked so we can finally allocate it */
-    sigelf_signer_t *ret_ptr = malloc(sizeof(ret));
-    assert(ret_ptr);
-    memcpy(ret_ptr, &ret, sizeof(ret));
+    func_end:
 
-    return ret_ptr;
+    if (fp) fclose(fp);
+
+    if (success) {
+        sigelf_signer_t *ret_ptr = malloc(sizeof(ret));
+        if (ret_ptr) 
+            return memcpy(ret_ptr, &ret, sizeof(ret));
+        H(save_libc_error)();
+    }
+
+    EVP_PKEY_free(ret.pkey);
+    return NULL;
 }
 
 unsigned char *SigElf_SignElf(

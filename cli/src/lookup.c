@@ -10,6 +10,9 @@
 int lookup(int argc, char * const *argv) {
     size_t elflen;
     void *elf_addr = map_file_to_memory(argv[2], &elflen);
+    
+    if (elf_addr)
+        return perror(argv[2]), 1;
 
     if (SigElf_LoadSystemCAs(SigElf_GetDefaultCAStore()) < 0)
         fprintf(stderr, "Warning: unable to load default CAs: %s\n", SigElf_GetErrorMessage());

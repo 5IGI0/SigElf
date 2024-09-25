@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <assert.h>
 
 #include <elf.h>
 #include <openssl/err.h>
