@@ -30,7 +30,7 @@
 #endif
 
 struct elf_note {
-    const char  *addr; /* NULL = will be filled of 0*/
+    const char  *addr; /* NULL = will be filled of 0 */
     size_t      len;
 };
 static void set_extra_notes(struct elf_note notes[SIGELF_NOTE_COUNT], sigelf_sign_opt_t *opt) {
@@ -73,7 +73,6 @@ unsigned char *SIGNING_FUNC_NAME(
     sigelf_sign_opt_t *opt,
     unsigned char const *elf,
     size_t elflen, size_t *outlen) {
-    /* TODO: check if a signature is present / magic numbers */
     /* TODO: the code assumes header->e_phentsize == sizeof(ElfN(Phdr)) */
     struct elf_note notes[SIGELF_NOTE_COUNT] = {0};
     unsigned char   *retbuf    = NULL;

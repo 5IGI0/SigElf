@@ -20,6 +20,7 @@
 
 #include "../defines.h"
 #include "../macros.h"
+#include "../signature.h"
 
 #ifdef ELF64
 #define ElfN(x) Elf64_##x
@@ -32,7 +33,6 @@
 #endif
 
 sigelf_signature_t *VERIFY_FUNC_NAME(unsigned const char *elf, size_t elflen) {
-    /* TODO: check if a signature is present / magic numbers */
     /* TODO: the code assumes header->e_phentsize == sizeof(ElfN(Phdr)) */
     sigelf_signature_t  ret = {0};
     EVP_MD_CTX  *md_ctx = NULL;
@@ -119,10 +119,9 @@ sigelf_signature_t *VERIFY_FUNC_NAME(unsigned const char *elf, size_t elflen) {
     if (success) {
         sigelf_signature_t *sig = malloc(sizeof(ret));
 
-        /* TODO: free ret */
-        if (!sig) return NULL;
+        if (!sig) return H(free_signature)(ret), NULL;
 
         return memcpy(sig, &ret, sizeof(ret));
     } else
-        return NULL; /* TODO: free ret */
+        return H(free_signature)(ret), NULL;
 }

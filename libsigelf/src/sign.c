@@ -77,6 +77,7 @@ unsigned char *SigElf_SignElf(
     sigelf_sign_opt_t *opt,
     unsigned char const *elf,
     size_t elflen, size_t *outlen) {
+    /* TODO: check if a signature is present / magic numbers */
     if (elf[EI_CLASS] == ELFCLASS64)
         return H(sign_elf64)(signer, opt, elf, elflen, outlen);
     return H(sign_elf32)(signer, opt, elf, elflen, outlen);

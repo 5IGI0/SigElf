@@ -1,4 +1,5 @@
 #include "sigelf/defines.h"
+#include <openssl/evp.h>
 #include <openssl/obj_mac.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
@@ -63,4 +64,15 @@ const char *SigElf_GetRawCertificate(sigelf_signature_t *sig) {
     if (sig == NULL)
         return NULL;
     return (const char *)sig->properties[SIGELF_CERT_NOTE].addr;
+}
+
+void H(free_signature)(sigelf_signature_t sig) {
+    X509_free(sig.cert);
+    EVP_PKEY_free(sig.pkey);
+}
+
+void SigElf_FreeSignature(sigelf_signature_t *sig) {
+    if (sig == NULL) return;
+    H(free_signature)(*sig);
+    free(sig);
 }
