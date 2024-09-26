@@ -1,3 +1,4 @@
+#include "sigelf/defines.h"
 #include <openssl/obj_mac.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
@@ -56,4 +57,10 @@ int SigElf_IsSignerTrusted(sigelf_signature_t *sig, sigelf_ca_store_t *store) {
         store = SigElf_GetDefaultCAStore();
 
     return H(is_certificate_trusted)(store, sig->cert);
+}
+
+const char *SigElf_GetRawCertificate(sigelf_signature_t *sig) {
+    if (sig == NULL)
+        return NULL;
+    return (const char *)sig->properties[SIGELF_CERT_NOTE].addr;
 }

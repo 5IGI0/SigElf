@@ -69,16 +69,20 @@ sigelf_ca_store_t *SigElf_GetDefaultCAStore() {
     return (success) ? &store : NULL;
 }
 
-int SigElf_LoadSystemCAs(sigelf_ca_store_t *store) {
+int SigElf_CAStoreAddDirectoryStore(sigelf_ca_store_t *store, const char *path) {
     int success = 0;
 
-    if (X509_STORE_load_locations(store->store, NULL, "/etc/sigelf/certs/") != 1)
+    if (X509_STORE_load_locations(store->store, NULL, path) != 1)
         CRYPT_ERR_HELP();
     success = 1;
 
     func_end:
     
     return (success) ? 0 : -1;
+}
+
+int SigElf_LoadSystemCAs(sigelf_ca_store_t *store) {
+    return SigElf_CAStoreAddDirectoryStore(store, "/etc/sigelf/certs/");
 }
 
 int H(is_certificate_trusted)(sigelf_ca_store_t *store, X509 *cert) {

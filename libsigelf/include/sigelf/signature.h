@@ -35,5 +35,6 @@ int         SigElf_IsModified(sigelf_signature_t *sig);
 const char  *SigElf_GetSignerName(sigelf_signature_t *sig);
 const char  *SigElf_GetIssuerName(sigelf_signature_t *sig);
 int         SigElf_IsSignerTrusted(sigelf_signature_t *sig, sigelf_ca_store_t *store);
+const char *SigElf_GetRawCertificate(sigelf_signature_t *sig);
 
 #endif /* LIBSIGNELF_VERIFY_H__ */

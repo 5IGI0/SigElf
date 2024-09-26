@@ -6,21 +6,30 @@
 #include <sigelf/errors.h>
 
 #include "utils.h"
+#include "lookup_opts.h"
 
 int lookup(int argc, char * const *argv) {
+    int arg_ind;
     size_t elflen;
-    void *elf_addr = map_file_to_memory(argv[2], &elflen);
-    
-    if (elf_addr)
+    lookup_opt_t args = parse_lookup_args(argc, argv, &arg_ind);
+
+    void *elf_addr = map_file_to_memory(argv[arg_ind], &elflen);
+    if (elf_addr == NULL)
         return perror(argv[2]), 1;
 
-    if (SigElf_LoadSystemCAs(SigElf_GetDefaultCAStore()) < 0)
-        fprintf(stderr, "Warning: unable to load default CAs: %s\n", SigElf_GetErrorMessage());
+    if (args.default_CAs) {
+        if (SigElf_LoadSystemCAs(SigElf_GetDefaultCAStore()) < 0)
+            fprintf(stderr, "Warning: unable to load default CAs: %s\n", SigElf_GetErrorMessage());
+    }
+
+    if (args.CAdir) {
+        if (SigElf_CAStoreAddDirectoryStore(SigElf_GetDefaultCAStore(), args.CAdir) < 0)
+            fprintf(stderr, "Warning: unable to load CA directory: %s\n", SigElf_GetErrorMessage());
+    }
 
     sigelf_signature_t *sig = SigElf_GetElfSignature(elf_addr, elflen);
-
     if (sig == NULL) {
-        return fprintf(stderr, "%s: %s\n", argv[2], SigElf_GetErrorMessage()), 1; 
+        return fprintf(stderr, "%s: %s\n", argv[arg_ind], SigElf_GetErrorMessage()), 1; 
     }
 
     printf(

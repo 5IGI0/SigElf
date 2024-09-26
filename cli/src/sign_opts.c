@@ -11,7 +11,7 @@
 #include "sign_opts.h"
 
 static void print_usage(char * const *argv) {
-    printf("%s sign <INPUT_FILE> <OUTPUT_FILE>\n", argv[0]);
+    printf("Usage: %s sign <INPUT_FILE> <OUTPUT_FILE>\n", argv[0]);
     exit(1);
 }
 
