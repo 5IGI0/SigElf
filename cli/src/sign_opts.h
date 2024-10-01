@@ -5,6 +5,8 @@ typedef struct {
     char *profile;
     char *cert_path;
     char *key_path;
+    char *manifest;
+    char *program_id;
 
     char *input_file;
     char *output_file;

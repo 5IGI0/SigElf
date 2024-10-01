@@ -1,3 +1,4 @@
+#include "sigelf/defines.h"
 #include <stdio.h>
 #include <assert.h>
 
@@ -11,6 +12,7 @@
 
 #define LIBSIGNELF_INTERNAL
 #include <sigelf/signing.h>
+#include <sigelf/errors.h>
 
 #include "elf/sign.h" /* IWYU pragma: keep (???) */
 #include "macros.h"
@@ -81,4 +83,29 @@ unsigned char *SigElf_SignElf(
     if (elf[EI_CLASS] == ELFCLASS64)
         return H(sign_elf64)(signer, opt, elf, elflen, outlen);
     return H(sign_elf32)(signer, opt, elf, elflen, outlen);
+}
+
+sigelf_sign_opt_t *SigElf_NewSigningOption() {
+    sigelf_sign_opt_t *ret = calloc(1, sizeof(sigelf_sign_opt_t));
+
+    if (ret == NULL)
+        H(save_libc_error)();
+
+    return ret;
+}
+
+int SigElf_AddSigningOption(int dttyp, sigelf_sign_opt_t *opt, const void *dt, size_t dtlen) {
+    switch (dttyp) {
+        case SIGELF_SIGN_OPT_MANIFEST:
+            opt->properties[SIGELF_MANIFEST_NOTE].addr = dt;
+            opt->properties[SIGELF_MANIFEST_NOTE].len = dtlen;
+            return 0;
+        case SIGELF_SIGN_OPT_PROGRAM_ID:
+            opt->properties[SIGELF_PROGRAM_ID_NOTE].addr = dt;
+            opt->properties[SIGELF_PROGRAM_ID_NOTE].len = dtlen;
+            return 0;
+    }
+
+    H(set_error)("unknown option", SIGELF_ERR_UNKOPT);
+    return -1;
 }

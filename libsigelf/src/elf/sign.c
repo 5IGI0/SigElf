@@ -30,12 +30,17 @@
 #endif
 
 struct elf_note {
-    const char  *addr; /* NULL = will be filled of 0 */
+    const unsigned char  *addr; /* NULL = will be filled with 0 */
     size_t      len;
 };
 static void set_extra_notes(struct elf_note notes[SIGELF_NOTE_COUNT], sigelf_sign_opt_t *opt) {
-    (void) notes;
-    (void) opt;
+    if (opt == NULL) return;
+    for (size_t i = 0; i < SIGELF_NOTE_COUNT; i++) {
+        if (opt->properties[i].len) {
+            notes[i].addr = opt->properties[i].addr;
+            notes[i].len = opt->properties[i].len;
+        }
+    }
 }
 
 static size_t count_notes(struct elf_note notes[SIGELF_NOTE_COUNT]) {
@@ -93,10 +98,12 @@ unsigned char *SIGNING_FUNC_NAME(
     if (EVP_DigestSign(md_ctx, NULL, &siglen, NULL, 0) != 1)            CRYPT_ERR_HELP();
 
     set_extra_notes(notes, opt);
-    notes[SIGELF_SIG_NOTE].addr = NULL;
-    notes[SIGELF_SIG_NOTE].len  = siglen + sizeof(uint32_t);
-    notes[SIGELF_CERT_NOTE].addr = signer->cert;
-    notes[SIGELF_CERT_NOTE].len  = signer->certlen+1; // cert + nullbyte
+    notes[SIGELF_SIG_NOTE].addr     = NULL;
+    notes[SIGELF_SIG_NOTE].len      = siglen + sizeof(uint32_t);
+    notes[SIGELF_CERT_NOTE].addr    = (const unsigned char *)signer->cert;
+    notes[SIGELF_CERT_NOTE].len     = signer->certlen+1; // cert + nullbyte
+    notes[SIGELF_VER_NOTE].addr     = (const unsigned char *)"0.1.0";
+    notes[SIGELF_VER_NOTE].len      = sizeof("0.1.0");
 
     *outlen = round_elflen;
     /* new program headers */
@@ -132,23 +139,23 @@ unsigned char *SIGNING_FUNC_NAME(
             continue;
 
         /* program header */
-        ElfN(Phdr) *phdr = (ElfN(Phdr) *)(retbuf + header->e_phoff + (header->e_phentsize * header->e_phnum));
-        phdr->p_type = PT_NOTE;
-        phdr->p_filesz = notes[i].len + sizeof(ElfN(Nhdr)) + sizeof(SIGELF_NOTE_NAMESPACE);
-        phdr->p_memsz = notes[i].len + sizeof(ElfN(Nhdr)) + sizeof(SIGELF_NOTE_NAMESPACE);
-        phdr->p_offset = content_offset;
-        phdr->p_vaddr = content_offset;
-        phdr->p_paddr = content_offset;
-        phdr->p_flags = PF_R;
-        phdr->p_align = 1;
+        ElfN(Phdr) *phdr    = (ElfN(Phdr) *)(retbuf + header->e_phoff + (header->e_phentsize * header->e_phnum));
+        phdr->p_type        = PT_NOTE;
+        phdr->p_filesz      = notes[i].len + sizeof(ElfN(Nhdr)) + sizeof(SIGELF_NOTE_NAMESPACE);
+        phdr->p_memsz       = notes[i].len + sizeof(ElfN(Nhdr)) + sizeof(SIGELF_NOTE_NAMESPACE);
+        phdr->p_offset      = content_offset;
+        phdr->p_vaddr       = content_offset;
+        phdr->p_paddr       = content_offset;
+        phdr->p_flags       = PF_R;
+        phdr->p_align       = 1;
         header->e_phnum++;
         content_offset += phdr->p_filesz;
 
         /* note header */
-        ElfN(Nhdr) *nhdr = (ElfN(Nhdr) *)(retbuf + phdr->p_offset);
-        nhdr->n_namesz = sizeof(SIGELF_NOTE_NAMESPACE);
-        nhdr->n_descsz = notes[i].len;
-        nhdr->n_type = i;
+        ElfN(Nhdr) *nhdr    = (ElfN(Nhdr) *)(retbuf + phdr->p_offset);
+        nhdr->n_namesz      = sizeof(SIGELF_NOTE_NAMESPACE);
+        nhdr->n_descsz      = notes[i].len;
+        nhdr->n_type        = i;
 
         memcpy(retbuf + phdr->p_offset + sizeof(*nhdr), /* namespace */
             SIGELF_NOTE_NAMESPACE, sizeof(SIGELF_NOTE_NAMESPACE));

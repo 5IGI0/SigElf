@@ -60,10 +60,29 @@ int SigElf_IsSignerTrusted(sigelf_signature_t *sig, sigelf_ca_store_t *store) {
     return H(is_certificate_trusted)(store, sig->cert);
 }
 
-const char *SigElf_GetRawCertificate(sigelf_signature_t *sig) {
-    if (sig == NULL)
+unsigned const char *SigElf_GetSignatureProperty(sigelf_signature_t *sig, int property_id, size_t *proplen) {
+    if (sig == NULL || property_id >= SIGELF_NOTE_COUNT)
         return NULL;
-    return (const char *)sig->properties[SIGELF_CERT_NOTE].addr;
+
+    if (proplen)
+        *proplen = sig->properties[property_id].len;
+
+    return sig->properties[property_id].addr;
+}
+
+const char *SigElf_GetRawCertificate(sigelf_signature_t *sig) {
+    // TODO: check for nullbyte
+    return (const char *)SigElf_GetSignatureProperty(sig, SIGELF_CERT_NOTE, NULL);
+}
+
+const char *SigElf_GetProgramId(sigelf_signature_t *sig) {
+    // TODO: check for nullbyte
+    return (const char *)SigElf_GetSignatureProperty(sig, SIGELF_PROGRAM_ID_NOTE, NULL);
+}
+
+const char *SigElf_GetManifest(sigelf_signature_t *sig) {
+    // TODO: check for nullbyte
+    return (const char *)SigElf_GetSignatureProperty(sig, SIGELF_MANIFEST_NOTE, NULL);
 }
 
 void H(free_signature)(sigelf_signature_t sig) {

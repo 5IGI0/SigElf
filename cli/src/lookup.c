@@ -33,13 +33,22 @@ int lookup(int argc, char * const *argv) {
     }
 
     printf(
-        "Signed By: %s\n"
-        "Issued By: %s\n"
-        "Trusted  : %s\n"
-        "Status   : %s\n",
+        "Signed By : %s\n"
+        "Issued By : %s\n"
+        "Trusted   : %s\n"
+        "Status    : %s\n",
         SigElf_GetSignerName(sig),
         SigElf_GetIssuerName(sig),
         SigElf_IsSignerTrusted(sig, NULL) ? "\e[92mYes\e[0m" : "\e[91mNo\e[0m",
         SigElf_IsModified(sig) ? "\e[91mModified\e[0m" : "\e[92mUnaltered\e[0m");
+
+    const char *tmp;
+
+    if ((tmp = SigElf_GetProgramId(sig)))
+        printf("Program ID: %s\n", tmp);
+
+    if ((tmp = SigElf_GetManifest(sig)))
+        printf("Manifest  : %s\n", tmp);
+
     return 0;
 }

@@ -20,13 +20,15 @@ sign_opt_t parse_sign_args(int argc, char * const *argv, int *args_ind) {
     struct option options[] = {
         {"private-key", required_argument, 0, 'k'},
         {"certificate", required_argument, 0, 'c'},
-        {"profile", required_argument, 0, 'p'}
+        {"profile", required_argument, 0, 'p'},
+        {"manifest", required_argument, 0, 'm'},
+        {"program-id", required_argument, 0, 'i'}
     };
     optind = 2;
     sign_opt_t opts = {0};
 
     while (1) {
-        char c = getopt_long(argc, argv, "k:c:p:",
+        char c = getopt_long(argc, argv, "k:c:p:m:",
             options, &opt_id);
 
         if (c == -1)
@@ -41,6 +43,12 @@ sign_opt_t parse_sign_args(int argc, char * const *argv, int *args_ind) {
                 break;
             case 'c':
                 opts.cert_path = optarg;
+                break;
+            case 'm':
+                opts.manifest = optarg;
+                break;
+            case 'i':
+                opts.program_id = optarg;
                 break;
         }
     }
