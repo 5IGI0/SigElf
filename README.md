@@ -8,8 +8,6 @@ Key Components:
 
 - CLI Tool: A command-line interface for verifying and signing binaries.
 - libsigelf: A library for working with signatures.
-- ksigelf: A kernel module intended to prevent unauthorized binaries from executing (in conceptual stage).
-- sigelf-patches: Patches for the GNU C Library to enable verification of libraries in dynamic environments (in conceptual stage).
 
 Dependencies:
 
